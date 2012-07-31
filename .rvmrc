@@ -1,0 +1,4 @@
+export RUBYOPT="-Ilib:test"
+export JRUBY_OPTS="--1.9"
+rvm use 1.9.3@stompkiq --create
+#rvm use jruby@stompkiq --create

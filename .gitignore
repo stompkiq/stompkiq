@@ -1,0 +1,6 @@
+tags
+Gemfile.lock
+*.swp
+dump.rdb
+.rbx
+coverage/

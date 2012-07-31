@@ -1,0 +1,9 @@
+---
+:verbose:      false
+:environment:  xzibit
+:require:      ./test/fake_env.rb
+:pidfile:      /tmp/stompkiq-config-test.pid
+:concurrency:  50
+:queues:
+  - [often, 2]
+  - [seldom, 1]
