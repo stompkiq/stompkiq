@@ -20,6 +20,9 @@ class TestClient < MiniTest::Unit::TestCase
       def @redis.with; yield self; end
       def @redis.exec; true; end
       Stompkiq.instance_variable_set(:@redis, @redis)
+
+      @stomp = MiniTest::Mock.new
+      Stompkiq.instance_variable_set(:@stomp, @stomp)
     end
 
     it 'raises ArgumentError with invalid params' do
@@ -33,10 +36,11 @@ class TestClient < MiniTest::Unit::TestCase
     end
 
     it 'pushes messages to redis' do
-      @redis.expect :rpush, 1, ['queue:foo', String]
+      @stomp.expect :publish, nil, ['/queue/foo', String]
+#      @redis.expect :rpush, 1, ['/queue/foo', String]
       pushed = Stompkiq::Client.push('queue' => 'foo', 'class' => MyWorker, 'args' => [1, 2])
       assert pushed
-      @redis.verify
+      @stomp.verify
     end
 
     class MyWorker
