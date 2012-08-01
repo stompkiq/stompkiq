@@ -55,7 +55,8 @@ module Stompkiq
         self.stompkiq_options_hash = get_stompkiq_options.merge(stringify_keys(opts || {}))
       end
 
-      DEFAULT_OPTIONS = { 'retry' => true, 'queue' => 'default' }
+      # TODO: Add 'topic' => '/topic/default'
+      DEFAULT_OPTIONS = { 'retry' => true, 'queue' => 'default', 'queuetype' => 'queue' }
 
       def get_stompkiq_options # :nodoc:
         self.stompkiq_options_hash ||= DEFAULT_OPTIONS

@@ -59,7 +59,7 @@ module Stompkiq
 
   def self.redis(&block)
     @redis ||= Stompkiq::RedisConnection.create
-    raise ArgumentError, "requires a block" if !block
+    raise ArgumentError, "requires a block" unless block_given?
     @redis.with(&block)
   end
 
@@ -70,6 +70,22 @@ module Stompkiq
       @redis = hash
     else
       raise ArgumentError, "redis= requires a Hash or ConnectionPool"
+    end
+  end
+
+  def self.stomp(&block)
+    @stomp ||= Stompkiq::StompConnection.create
+    raise ArgumentError, "requires a block" unless block_given?
+    @stomp.with(&block)
+  end
+
+  def self.stomp=(hash)
+    if hash.is_a?(Hash)
+      @stomp = StompConnection.create(hash)
+    elsif hash.is_a?(ConnectionPool)
+      @stomp = hash
+    else
+      raise ArgumentError, "stomp= requires a Hash or ConnectionPool"
     end
   end
 

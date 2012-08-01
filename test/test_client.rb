@@ -1,9 +1,10 @@
 require 'helper'
 require 'stompkiq/client'
 require 'stompkiq/worker'
+require 'stomp'
 
 class TestClient < MiniTest::Unit::TestCase
-  describe 'with mock redis' do
+  describe 'with mock redis and mock stomp' do
     before do
       @redis = MiniTest::Mock.new
       def @redis.multi; [yield] * 2 if block_given?; end
@@ -22,6 +23,7 @@ class TestClient < MiniTest::Unit::TestCase
       Stompkiq.instance_variable_set(:@redis, @redis)
 
       @stomp = MiniTest::Mock.new
+      def @stomp.with; yield self; end
       Stompkiq.instance_variable_set(:@stomp, @stomp)
     end
 
@@ -35,9 +37,14 @@ class TestClient < MiniTest::Unit::TestCase
       end
     end
 
-    it 'pushes messages to redis' do
-      @stomp.expect :publish, nil, ['/queue/foo', String]
-#      @redis.expect :rpush, 1, ['/queue/foo', String]
+    it 'raises NotImplementedError with at param' do
+      assert_raises NotImplementedError do
+        Stompkiq::Client.push('queue' => 'foo', 'class' => MyWorker, 'args' => [1, 2], 'at' => 0.01)
+      end
+    end
+
+    it 'pushes messages to stomp' do
+      @stomp.expect :publish, true, ['/queue/foo', String]
       pushed = Stompkiq::Client.push('queue' => 'foo', 'class' => MyWorker, 'args' => [1, 2])
       assert pushed
       @stomp.verify
@@ -52,24 +59,23 @@ class TestClient < MiniTest::Unit::TestCase
     end
 
     it 'handles perform_async' do
-      @redis.expect :rpush, 1, ['queue:default', String]
+      @stomp.expect :publish, nil, ['/queue/default', String] # I am expecting @stomp.publish('/queue/default', any_string) and I will return nil when it gets called
       pushed = MyWorker.perform_async(1, 2)
       assert pushed
-      @redis.verify
+      @stomp.verify
     end
 
     it 'handles perform_async on failure' do
-      @redis.expect :rpush, nil, ['queue:default', String]
+      def @stomp.publish(*args); raise Stomp::Error::MaxReconnectAttempts; end
       pushed = MyWorker.perform_async(1, 2)
       refute pushed
-      @redis.verify
     end
 
-    it 'enqueues messages to redis' do
-      @redis.expect :rpush, 1, ['queue:default', String]
+    it 'enqueues messages to stomp' do
+      @stomp.expect :publish, true, ['/queue/default', String]
       pushed = Stompkiq::Client.enqueue(MyWorker, 1, 2)
       assert pushed
-      @redis.verify
+      @stomp.verify
     end
 
     class QueuedWorker
@@ -78,18 +84,32 @@ class TestClient < MiniTest::Unit::TestCase
     end
 
     it 'enqueues to the named queue' do
-      @redis.expect :rpush, 1, ['queue:flimflam', String]
+      @stomp.expect :publish, true, ['/queue/flimflam', String]
       pushed = QueuedWorker.perform_async(1, 2)
       assert pushed
-      @redis.verify
+      @stomp.verify
+    end
+
+    class TopicedWorker
+      include Stompkiq::Worker
+      stompkiq_options :queue => :flimflam, :queuetype => :topic, :timeout => 1
+    end
+    
+    it 'enqueues to the named queue' do
+      @stomp.expect :publish, true, ['/topic/flimflam', String]
+      pushed = TopicedWorker.perform_async(1, 2)
+      assert pushed
+      @stomp.verify
     end
 
     it 'retrieves queues' do
+      # We'll still use Redis to store our registered queues and workers
       @redis.expect :smembers, ['bob'], ['queues']
       assert_equal ['bob'], Stompkiq::Client.registered_queues
     end
 
     it 'retrieves workers' do
+      # We'll still use Redis to store our registered queues and workers
       @redis.expect :smembers, ['bob'], ['workers']
       assert_equal ['bob'], Stompkiq::Client.registered_workers
     end

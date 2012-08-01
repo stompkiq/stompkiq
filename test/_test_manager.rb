@@ -10,6 +10,8 @@ class TestManager < MiniTest::Unit::TestCase
     before do
       Stompkiq.redis = REDIS
       Stompkiq.redis {|c| c.flushdb }
+      Stompkiq.stomp = STOMP
+      Stompkiq.stomp {|c| c.flush_queues }
       $processed = 0
       $mutex = Mutex.new
     end

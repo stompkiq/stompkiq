@@ -16,6 +16,8 @@ module Stompkiq
       Stompkiq.redis { |x| x.smembers('queues') }
     end
 
+    # TODO: self.registered_topics
+
     ##
     # The main method used to push a job to Redis.  Accepts a number of options:
     #
@@ -41,23 +43,25 @@ module Stompkiq
 
       item = worker_class.get_stompkiq_options.merge(item)
       item['retry'] = !!item['retry']
-      queue = item['queue']
+      queue = "/#{item['queuetype']}/#{item['queue']}"
 
       pushed = false
       Stompkiq.client_middleware.invoke(worker_class, item, queue) do
         payload = Stompkiq.dump_json(item)
-        Stompkiq.redis do |conn|
+        Stompkiq.stomp do |conn|
           if item['at']
-            pushed = conn.zadd('schedule', item['at'].to_s, payload)
+            raise NotImplementedError, "Stompkiq doesn't support scheduling yet"
           else
-            _, pushed = conn.multi do
-              conn.sadd('queues', queue)
-              conn.rpush("queue:#{queue}", payload)
+            begin
+              conn.publish(queue, payload)
+              pushed = true
+            rescue Stomp::Error::MaxReconnectAttempts => e
+              pushed = false
             end
           end
         end
       end
-      !! pushed
+      pushed
     end
 
     # Redis compatibility helper.  Example usage:
