@@ -1,19 +1,19 @@
-require 'sidekiq/scheduled'
+require 'stompkiq/scheduled'
 
-module Sidekiq
+module Stompkiq
   module Middleware
     module Server
       ##
-      # Automatically retry jobs that fail in Sidekiq.
-      # Sidekiq's retry support assumes a typical development lifecycle:
+      # Automatically retry jobs that fail in Stompkiq.
+      # Stompkiq's retry support assumes a typical development lifecycle:
       # 0. push some code changes with a bug in it
-      # 1. bug causes message processing to fail, sidekiq's middleware captures
+      # 1. bug causes message processing to fail, stompkiq's middleware captures
       #    the message and pushes it onto a retry queue
-      # 2. sidekiq retries messages in the retry queue multiple times with
+      # 2. stompkiq retries messages in the retry queue multiple times with
       #    an exponential delay, the message continues to fail
       # 3. after a few days, a developer deploys a fix.  the message is
       #    reprocessed successfully.
-      # 4. if 3 never happens, sidekiq will eventually give up and throw the
+      # 4. if 3 never happens, stompkiq will eventually give up and throw the
       #    message away.
       #
       # A message looks like:
@@ -32,7 +32,7 @@ module Sidekiq
       # We don't store the backtrace as that can add a lot of overhead
       # to the message and everyone is using Airbrake, right?
       class RetryJobs
-        include Sidekiq::Util
+        include Stompkiq::Util
 
         # delayed_job uses the same basic formula
         MAX_COUNT = 25
@@ -64,8 +64,8 @@ module Sidekiq
             delay = DELAY.call(count)
             logger.debug { "Failure! Retry #{count} in #{delay} seconds" }
             retry_at = Time.now.to_f + delay
-            payload = Sidekiq.dump_json(msg)
-            Sidekiq.redis do |conn|
+            payload = Stompkiq.dump_json(msg)
+            Stompkiq.redis do |conn|
               conn.zadd('retry', retry_at.to_s, payload)
             end
           else
