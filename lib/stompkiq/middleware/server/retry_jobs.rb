@@ -22,7 +22,7 @@ module Stompkiq
       #
       # We'll add a bit more data to the message to support retries:
       #
-      #  * 'queue' - the queue to use
+      #  * :queue - the queue to use
       #  * 'retry_count' - number of times we've retried so far.
       #  * 'error_message' - the message from the exception
       #  * 'error_class' - the exception class
@@ -41,23 +41,23 @@ module Stompkiq
         def call(worker, msg, queue)
           yield
         rescue => e
-          raise unless msg['retry']
+          raise unless msg[:retry]
 
-          msg['queue'] = queue
-          msg['error_message'] = e.message
-          msg['error_class'] = e.class.name
-          count = if msg['retry_count']
-                    msg['retried_at'] = Time.now.utc
-                    msg['retry_count'] += 1
+          msg[:queue] = queue
+          msg[:error_message] = e.message
+          msg[:error_class] = e.class.name
+          count = if msg[:retry_count]
+                    msg[:retried_at] = Time.now.utc
+                    msg[:retry_count] += 1
                   else
-                    msg['failed_at'] = Time.now.utc
-                    msg['retry_count'] = 0
+                    msg[:failed_at] = Time.now.utc
+                    msg[:retry_count] = 0
                   end
 
-          if msg['backtrace'] == true
-            msg['error_backtrace'] = e.backtrace
-          elsif msg['backtrace'].to_i != 0
-            msg['error_backtrace'] = e.backtrace[0..msg['backtrace'].to_i]
+          if msg[:backtrace] == true
+            msg[:error_backtrace] = e.backtrace
+          elsif msg[:backtrace].to_i != 0
+            msg[:error_backtrace] = e.backtrace[0..msg[:backtrace].to_i]
           end
 
           if count <= MAX_COUNT
@@ -66,7 +66,7 @@ module Stompkiq
             retry_at = Time.now.to_f + delay
             payload = Stompkiq.dump_json(msg)
             Stompkiq.redis do |conn|
-              conn.zadd('retry', retry_at.to_s, payload)
+              conn.zadd(:retry, retry_at.to_s, payload)
             end
           else
             # Goodbye dear message, you (re)tried your best I'm sure.

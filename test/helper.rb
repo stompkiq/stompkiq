@@ -8,6 +8,11 @@ require 'minitest/unit'
 require 'minitest/pride'
 require 'minitest/autorun'
 
+require 'celluloid'
+
+require 'apollo_mgmt'
+APOLLO_BROKER = ApolloMgmt::Broker.new
+
 require 'stompkiq'
 require 'stompkiq/util'
 Stompkiq.logger.level = Logger::ERROR

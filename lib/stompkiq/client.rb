@@ -31,25 +31,25 @@ module Stompkiq
     # symbols in 'args' will be converted to strings.
     #
     # Example:
-    #   Stompkiq::Client.push('queue' => 'my_queue', 'class' => MyWorker, 'args' => ['foo', 1, :bat => 'bar'])
+    #   Stompkiq::Client.push(:queue => 'my_queue', 'class' => MyWorker, 'args' => ['foo', 1, :bat => 'bar'])
     #
     def self.push(item)
       raise(ArgumentError, "Message must be a Hash of the form: { 'class' => SomeWorker, 'args' => ['bob', 1, :foo => 'bar'] }") unless item.is_a?(Hash)
-      raise(ArgumentError, "Message must include a class and set of arguments: #{item.inspect}") if !item['class'] || !item['args']
-      raise(ArgumentError, "Message must include a Stompkiq::Worker class, not class name: #{item['class'].ancestors.inspect}") if !item['class'].is_a?(Class) || !item['class'].respond_to?('get_stompkiq_options')
+      raise(ArgumentError, "Message must include a class and set of arguments: #{item.inspect}") if !item[:class] || !item[:args]
+      raise(ArgumentError, "Message must include a Stompkiq::Worker class, not class name: #{item[:class].ancestors.inspect}") if !item[:class].is_a?(Class) || !item[:class].respond_to?('get_stompkiq_options')
 
-      worker_class = item['class']
-      item['class'] = item['class'].to_s
+      worker_class = item[:class]
+      item[:class] = item[:class].to_s
 
       item = worker_class.get_stompkiq_options.merge(item)
-      item['retry'] = !!item['retry']
-      queue = "/#{item['queuetype']}/#{item['queue']}"
+      item[:retry] = !!item[:retry]
+      queue = "/#{item[:queuetype]}/#{item[:queue]}"
 
       pushed = false
       Stompkiq.client_middleware.invoke(worker_class, item, queue) do
         payload = Stompkiq.dump_json(item)
         Stompkiq.stomp do |conn|
-          if item['at']
+          if item[:at]
             raise NotImplementedError, "Stompkiq doesn't support scheduling yet"
           else
             begin

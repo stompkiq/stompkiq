@@ -1,4 +1,4 @@
-require 'helper'
+GGrequire 'helper'
 require 'stompkiq/client'
 require 'stompkiq/worker'
 require 'stomp'
@@ -39,13 +39,13 @@ class TestClient < MiniTest::Unit::TestCase
 
     it 'raises NotImplementedError with at param' do
       assert_raises NotImplementedError do
-        Stompkiq::Client.push('queue' => 'foo', 'class' => MyWorker, 'args' => [1, 2], 'at' => 0.01)
+        Stompkiq::Client.push(:queue => 'foo', 'class' => MyWorker, 'args' => [1, 2], 'at' => 0.01)
       end
     end
 
     it 'pushes messages to stomp' do
       @stomp.expect :publish, true, ['/queue/foo', String]
-      pushed = Stompkiq::Client.push('queue' => 'foo', 'class' => MyWorker, 'args' => [1, 2])
+      pushed = Stompkiq::Client.push(:queue => 'foo', 'class' => MyWorker, 'args' => [1, 2])
       assert pushed
       @stomp.verify
     end
@@ -104,13 +104,13 @@ class TestClient < MiniTest::Unit::TestCase
 
     it 'retrieves queues' do
       # We'll still use Redis to store our registered queues and workers
-      @redis.expect :smembers, ['bob'], ['queues']
+      @redis.expect :smembers, ['bob'], [:queues]
       assert_equal ['bob'], Stompkiq::Client.registered_queues
     end
 
     it 'retrieves workers' do
       # We'll still use Redis to store our registered queues and workers
-      @redis.expect :smembers, ['bob'], ['workers']
+      @redis.expect :smembers, ['bob'], [:workers]
       assert_equal ['bob'], Stompkiq::Client.registered_workers
     end
   end
@@ -127,8 +127,8 @@ class TestClient < MiniTest::Unit::TestCase
 
   describe 'inheritance' do
     it 'should inherit stompkiq options' do
-      assert_equal 'base', AWorker.get_stompkiq_options['retry']
-      assert_equal 'b', BWorker.get_stompkiq_options['retry']
+      assert_equal 'base', AWorker.get_stompkiq_options[:retry]
+      assert_equal 'b', BWorker.get_stompkiq_options[:retry]
     end
   end
 

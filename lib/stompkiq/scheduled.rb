@@ -37,8 +37,8 @@ module Stompkiq
                   logger.debug { "enqueued #{sorted_set}: #{message}" }
                   msg = Stompkiq.load_json(message)
                   conn.multi do
-                    conn.sadd('queues', msg['queue'])
-                    conn.rpush("queue:#{msg['queue']}", message)
+                    conn.sadd('queues', msg[:queue])
+                    conn.rpush("queue:#{msg[:queue]}", message)
                   end
                 end
               end

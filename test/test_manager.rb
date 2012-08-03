@@ -11,7 +11,8 @@ class TestManager < MiniTest::Unit::TestCase
       Stompkiq.redis = REDIS
       Stompkiq.redis {|c| c.flushdb }
       Stompkiq.stomp = STOMP
-      Stompkiq.stomp {|c| c.flush_queues }
+      APOLLO_BROKER.flush_all_queues!
+      
       $processed = 0
       $mutex = Mutex.new
     end
@@ -49,5 +50,5 @@ class TestManager < MiniTest::Unit::TestCase
         t.raise Interrupt
       end
     end
-  end
+   end
 end

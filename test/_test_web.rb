@@ -40,7 +40,7 @@ class TestWeb < MiniTest::Unit::TestCase
     end
 
     it 'can display queues' do
-      assert Stompkiq::Client.push('queue' => :foo, 'class' => WebWorker, 'args' => [1, 3])
+      assert Stompkiq::Client.push(:queue => :foo, 'class' => WebWorker, 'args' => [1, 3])
 
       get '/queues'
       assert_equal 200, last_response.status
@@ -145,7 +145,7 @@ class TestWeb < MiniTest::Unit::TestCase
 
       get '/queues/default'
       assert_equal 200, last_response.status
-      assert_match /#{msg['args'][2]}/, last_response.body
+      assert_match /#{msg[:args][2]}/, last_response.body
     end
 
     def add_scheduled
@@ -162,7 +162,7 @@ class TestWeb < MiniTest::Unit::TestCase
     def add_retry
       msg = { 'class' => 'HardWorker',
               'args' => ['bob', 1, Time.now.to_f],
-              'queue' => 'default',
+              :queue => 'default',
               'error_message' => 'Some fake message',
               'error_class' => 'RuntimeError',
               'retry_count' => 0,

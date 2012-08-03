@@ -32,13 +32,13 @@ module Stompkiq
 
     module ClassMethods
       def perform_async(*args)
-        client_push('class' => self, 'args' => args)
+        client_push(:class => self, :args => args)
       end
 
       def perform_in(interval, *args)
         int = interval.to_f
         ts = (int < 1_000_000_000 ? Time.now.to_f + int : int)
-        client_push('class' => self, 'args' => args, 'at' => ts)
+        client_push(:class => self, :args => args, :at => ts)
       end
       alias_method :perform_at, :perform_in
 
@@ -56,7 +56,7 @@ module Stompkiq
       end
 
       # TODO: Add 'topic' => '/topic/default'
-      DEFAULT_OPTIONS = { 'retry' => true, 'queue' => 'default', 'queuetype' => 'queue' }
+      DEFAULT_OPTIONS = { :retry => true, :queue => 'default', :queuetype => 'queue' }
 
       def get_stompkiq_options # :nodoc:
         self.stompkiq_options_hash ||= DEFAULT_OPTIONS
