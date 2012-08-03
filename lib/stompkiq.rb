@@ -1,7 +1,7 @@
 # require 'stompkiq/version'
 require 'stompkiq/logging'
 # require 'stompkiq/client'
-# require 'stompkiq/worker'
+ require 'stompkiq/worker'
 # require 'stompkiq/redis_connection'
 # require 'stompkiq/util'
 

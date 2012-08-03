@@ -14,3 +14,7 @@ Stompkiq.logger.level = Logger::ERROR
 
 require 'stompkiq/redis_connection'
 REDIS = Stompkiq::RedisConnection.create(:url => "redis://localhost/15", :namespace => 'testy')
+
+require 'stompkiq/stomp_connection'
+STOMP = Stompkiq::StompConnection.create
+

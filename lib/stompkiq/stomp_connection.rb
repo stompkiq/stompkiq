@@ -6,7 +6,7 @@ module Stompkiq
     def self.create(options={})
       username = options[:username] || ENV['STOMPTOGO_USERNAME'] || 'admin'
       password = options[:password] || ENV['STOMPTOGO_PASSWORD'] || 'password'
-      port = options[:port] || ENV['STOMPTOGO_PORT'] || '4567'
+      port = (options[:port] || ENV['STOMPTOGO_PORT'] || '61613').to_i
       url = options[:url] || ENV['STOMPTOGO_URL'] || 'localhost'
 
       # need a connection for Fetcher and Retry

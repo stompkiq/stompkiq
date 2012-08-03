@@ -6,7 +6,13 @@ gem 'redis-namespace'
 gem 'connection_pool', '~> 0.9.2'
 gem 'celluloid', '~> 0.11.1'
 gem 'multi_json', '~> 1'
-gem 'minitest', '~> 3'
+
+group :development, :test do
+  gem 'guard'
+  gem 'guard-minitest'
+  gem 'minitest', '~> 3'
+  gem 'apollo_mgmt', :git => 'git@github.com:Terenine/apollo_mgmt.git'
+end
 
 
 

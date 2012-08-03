@@ -47,12 +47,12 @@ module Stompkiq
           msg['error_message'] = e.message
           msg['error_class'] = e.class.name
           count = if msg['retry_count']
-            msg['retried_at'] = Time.now.utc
-            msg['retry_count'] += 1
-          else
-            msg['failed_at'] = Time.now.utc
-            msg['retry_count'] = 0
-          end
+                    msg['retried_at'] = Time.now.utc
+                    msg['retry_count'] += 1
+                  else
+                    msg['failed_at'] = Time.now.utc
+                    msg['retry_count'] = 0
+                  end
 
           if msg['backtrace'] == true
             msg['error_backtrace'] = e.backtrace
@@ -70,6 +70,7 @@ module Stompkiq
             end
           else
             # Goodbye dear message, you (re)tried your best I'm sure.
+            # TODO: Drop message into a poison message queue instead of dropping completely
             logger.debug { "Dropping message after hitting the retry maximum: #{msg}" }
           end
           raise
