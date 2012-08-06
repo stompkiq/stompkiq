@@ -2,7 +2,6 @@ require 'celluloid'
 
 require 'stompkiq/util'
 require 'stompkiq/processor'
-require 'stompkiq/fetcher'
 require 'stompkiq/version'
 
 module Stompkiq
@@ -29,7 +28,6 @@ module Stompkiq
       @done = false
       @busy = []
       @queues = options[:queues]
-      # @fetcher = Fetcher.new(current_actor, options[:queues])
       @ready = @count.times.map { Processor.new_link(current_actor) }
       procline
     end
@@ -70,9 +68,6 @@ module Stompkiq
       @queues.each do |q|
         subscribe q
       end
-      
-      
-#      @ready.each { dispatch }
     end
 
     def when_done(&blk)
@@ -90,7 +85,6 @@ module Stompkiq
         else
           @ready << processor if processor.alive?
         end
-        # dispatch
       end
     end
 
@@ -101,7 +95,6 @@ module Stompkiq
 
         unless stopped?
           @ready << Processor.new_link(current_actor)
-          # dispatch
         else
           signal(:shutdown) if @busy.empty?
         end
@@ -163,16 +156,6 @@ module Stompkiq
       end
     end
     
-    # def dispatch
-    #   return if stopped?
-    #   # This is a safety check to ensure we haven't leaked
-    #   # processors somehow.
-    #   raise "BUG: No processors, cannot continue!" if @ready.empty? && @busy.empty?
-    #   raise "No ready processor!?" if @ready.empty?
-
-    #   @fetcher.fetch!
-    # end
-
     def stopped?
       @done
     end
