@@ -33,6 +33,10 @@ module Stompkiq
       Stompkiq.redis(&block)
     end
 
+    def stomp(&block)
+      Stompkiq.stomp(&block)
+    end
+    
     def process_id
       Process.pid
     end

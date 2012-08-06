@@ -28,7 +28,8 @@ module Stompkiq
       @in_progress = {}
       @done = false
       @busy = []
-      @fetcher = Fetcher.new(current_actor, options[:queues])
+      @queues = options[:queues]
+      # @fetcher = Fetcher.new(current_actor, options[:queues])
       @ready = @count.times.map { Processor.new_link(current_actor) }
       procline
     end
@@ -39,8 +40,6 @@ module Stompkiq
         timeout = options[:timeout]
 
         @done = true
-        Stompkiq::Fetcher.done!
-        @fetcher.terminate! if @fetcher.alive?
 
         logger.info { "Shutting down #{@ready.size} quiet workers" }
         @ready.each { |x| x.terminate if x.alive? }
@@ -54,6 +53,13 @@ module Stompkiq
           end
         end
 
+        Stompkiq.stomp do |conn|
+          @queues.uniq.each do |q|
+            conn.unsubscribe(q)
+          end
+        end
+        
+
         return after(0) { signal(:shutdown) } if @busy.empty?
         logger.info { "Pausing up to #{timeout} seconds to allow workers to finish..." }
         hard_shutdown_in timeout if shutdown
@@ -61,7 +67,12 @@ module Stompkiq
     end
 
     def start
-      @ready.each { dispatch }
+      @queues.each do |q|
+        subscribe q
+      end
+      
+      
+#      @ready.each { dispatch }
     end
 
     def when_done(&blk)
@@ -79,7 +90,7 @@ module Stompkiq
         else
           @ready << processor if processor.alive?
         end
-        dispatch
+        # dispatch
       end
     end
 
@@ -90,7 +101,7 @@ module Stompkiq
 
         unless stopped?
           @ready << Processor.new_link(current_actor)
-          dispatch
+          # dispatch
         else
           signal(:shutdown) if @busy.empty?
         end
@@ -104,8 +115,8 @@ module Stompkiq
           # is blocked on redis and gets a message after
           # all the ready Processors have been stopped.
           # Push the message back to redis.
-          Stompkiq.redis do |conn|
-            conn.lpush("queue:#{queue}", msg)
+          Stompkiq.stomp do |conn|
+            conn.publish(queue, msg)
           end
         else
           processor = @ready.pop
@@ -125,31 +136,42 @@ module Stompkiq
           # They must die but their messages shall live on.
           logger.info("Still waiting for #{@busy.size} busy workers")
 
-          Stompkiq.redis do |conn|
+          Stompkiq.stomp do |conn|
             @busy.each do |processor|
               # processor is an actor proxy and we can't call any methods
               # that would go to the actor (since it's busy).  Instead
               # we'll use the object_id to track the worker's data here.
               msg, queue = @in_progress[processor.object_id]
-              conn.lpush("queue:#{queue}", msg)
+              conn.publish(queue, msg)
             end
+            
           end
-          logger.info("Pushed #{@busy.size} messages back to Redis")
+          logger.info("Pushed #{@busy.size} messages back to Apollo")
 
+          
           after(0) { signal(:shutdown) }
         end
       end
     end
 
-    def dispatch
-      return if stopped?
-      # This is a safety check to ensure we haven't leaked
-      # processors somehow.
-      raise "BUG: No processors, cannot continue!" if @ready.empty? && @busy.empty?
-      raise "No ready processor!?" if @ready.empty?
-
-      @fetcher.fetch!
+    def subscribe(queue_name)
+      Stompkiq.stomp do |conn|
+        conn.subscribe(queue_name) do  |msg|
+          assign(msg.body, msg.headers['destination'])
+        end
+        
+      end
     end
+    
+    # def dispatch
+    #   return if stopped?
+    #   # This is a safety check to ensure we haven't leaked
+    #   # processors somehow.
+    #   raise "BUG: No processors, cannot continue!" if @ready.empty? && @busy.empty?
+    #   raise "No ready processor!?" if @ready.empty?
+
+    #   @fetcher.fetch!
+    # end
 
     def stopped?
       @done

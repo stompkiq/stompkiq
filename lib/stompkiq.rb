@@ -102,7 +102,7 @@ module Stompkiq
   end
 
   def self.load_json(string)
-    MultiJson.decode(string)
+    MultiJson.decode(string, symbolize_keys: true)
   end
 
   def self.dump_json(object)
