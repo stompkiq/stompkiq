@@ -52,19 +52,19 @@ module Stompkiq
       #   :backtrace - whether to save any error backtrace in the retry payload to display in web UI,
       #      can be true, false or an integer number of lines to save, default *false*
       def stompkiq_options(opts={})
-        self.stompkiq_options_hash = get_stompkiq_options.merge(stringify_keys(opts || {}))
+        self.stompkiq_options_hash = get_stompkiq_options.merge(symbolize_keys(opts || {}))
       end
 
       # TODO: Add 'topic' => '/topic/default'
-      DEFAULT_OPTIONS = { :retry => true, :queue => 'default', :queuetype => 'queue' }
+      DEFAULT_OPTIONS = { :retry => true, :queue => 'default', :queuetype => :queue }
 
       def get_stompkiq_options # :nodoc:
         self.stompkiq_options_hash ||= DEFAULT_OPTIONS
       end
 
-      def stringify_keys(hash) # :nodoc:
+      def symbolize_keys(hash) # :nodoc:
         hash.keys.each do |key|
-          hash[key.to_s] = hash.delete(key)
+          hash[key.to_sym] = hash.delete(key)
         end
         hash
       end

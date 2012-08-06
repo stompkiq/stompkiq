@@ -18,16 +18,16 @@ module Stompkiq
       #
       # A message looks like:
       #
-      #     { 'class' => 'HardWorker', 'args' => [1, 2, 'foo'] }
+      #     { :class => 'HardWorker', :args => [1, 2, 'foo'] }
       #
       # We'll add a bit more data to the message to support retries:
       #
       #  * :queue - the queue to use
-      #  * 'retry_count' - number of times we've retried so far.
-      #  * 'error_message' - the message from the exception
-      #  * 'error_class' - the exception class
-      #  * 'failed_at' - the first time it failed
-      #  * 'retried_at' - the last time it was retried
+      #  * :retry_count - number of times we've retried so far.
+      #  * :error_message - the message from the exception
+      #  * :error_class - the exception class
+      #  * :failed_at - the first time it failed
+      #  * :retried_at - the last time it was retried
       #
       # We don't store the backtrace as that can add a lot of overhead
       # to the message and everyone is using Airbrake, right?

@@ -1,4 +1,4 @@
-GGrequire 'helper'
+require 'helper'
 require 'stompkiq/client'
 require 'stompkiq/worker'
 require 'stomp'
@@ -39,13 +39,13 @@ class TestClient < MiniTest::Unit::TestCase
 
     it 'raises NotImplementedError with at param' do
       assert_raises NotImplementedError do
-        Stompkiq::Client.push(:queue => 'foo', 'class' => MyWorker, 'args' => [1, 2], 'at' => 0.01)
+        Stompkiq::Client.push(:queue => 'foo', :class => MyWorker, :args => [1, 2], :at => 0.01)
       end
     end
 
     it 'pushes messages to stomp' do
       @stomp.expect :publish, true, ['/queue/foo', String]
-      pushed = Stompkiq::Client.push(:queue => 'foo', 'class' => MyWorker, 'args' => [1, 2])
+      pushed = Stompkiq::Client.push(:queue => 'foo', :class => MyWorker, :args => [1, 2])
       assert pushed
       @stomp.verify
     end
@@ -80,7 +80,7 @@ class TestClient < MiniTest::Unit::TestCase
 
     class QueuedWorker
       include Stompkiq::Worker
-      stompkiq_options :queue => :flimflam, :timeout => 1
+      stompkiq_options :queue => 'flimflam', :timeout => 1
     end
 
     it 'enqueues to the named queue' do
@@ -92,7 +92,7 @@ class TestClient < MiniTest::Unit::TestCase
 
     class TopicedWorker
       include Stompkiq::Worker
-      stompkiq_options :queue => :flimflam, :queuetype => :topic, :timeout => 1
+      stompkiq_options :queue => 'flimflam', :queuetype => :topic, :timeout => 1
     end
     
     it 'enqueues to the named queue' do
@@ -117,12 +117,12 @@ class TestClient < MiniTest::Unit::TestCase
 
   class BaseWorker
     include Stompkiq::Worker
-    stompkiq_options 'retry' => 'base'
+    stompkiq_options :retry => 'base'
   end
   class AWorker < BaseWorker
   end
   class BWorker < BaseWorker
-    stompkiq_options 'retry' => 'b'
+    stompkiq_options :retry => 'b'
   end
 
   describe 'inheritance' do

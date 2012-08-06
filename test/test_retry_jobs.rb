@@ -79,7 +79,7 @@ class TestRetry < MiniTest::Unit::TestCase
     it 'handles a recurring failed message' do
       @redis.expect :zadd, 1, [:retry, String, String]
       now = Time.now.utc
-      msg = {:class=>"Bob", :args=>[1, 2, "foo"], :retry => true, :queue=>"default", "error_message"=>"kerblammo!", "error_class"=>"RuntimeError", "failed_at"=>now, "retry_count"=>10}
+      msg = {:class=>"Bob", :args=>[1, 2, "foo"], :retry => true, :queue=>"default", :error_message=>"kerblammo!", :error_class=>"RuntimeError", :failed_at=>now, :retry_count=>10}
       handler = Stompkiq::Middleware::Server::RetryJobs.new
       assert_raises RuntimeError do
         handler.call('', msg, 'default') do
@@ -96,7 +96,7 @@ class TestRetry < MiniTest::Unit::TestCase
 
     it 'throws away old messages after too many retries' do
       now = Time.now.utc
-      msg = {:class=>"Bob", :args=>[1, 2, "foo"], :queue=>"default", "error_message"=>"kerblammo!", "error_class"=>"RuntimeError", "failed_at"=>now, "retry_count"=>25}
+      msg = {:class=>"Bob", :args=>[1, 2, "foo"], :queue=>"default", :error_message=>"kerblammo!", :error_class=>"RuntimeError", :failed_at=>now, :retry_count=>25}
       handler = Stompkiq::Middleware::Server::RetryJobs.new
       assert_raises RuntimeError do
         handler.call('', msg, 'default') do

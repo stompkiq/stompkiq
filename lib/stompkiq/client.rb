@@ -9,11 +9,11 @@ module Stompkiq
     end
 
     def self.registered_workers
-      Stompkiq.redis { |x| x.smembers('workers') }
+      Stompkiq.redis { |x| x.smembers(:workers) }
     end
 
     def self.registered_queues
-      Stompkiq.redis { |x| x.smembers('queues') }
+      Stompkiq.redis { |x| x.smembers(:queues) }
     end
 
     # TODO: self.registered_topics
@@ -28,13 +28,13 @@ module Stompkiq
     #   backtrace - whether to save any error backtrace, default false
     #
     # All options must be strings, not symbols.  NB: because we are serializing to JSON, all
-    # symbols in 'args' will be converted to strings.
+    # symbols in :args will be converted to strings.
     #
     # Example:
-    #   Stompkiq::Client.push(:queue => 'my_queue', 'class' => MyWorker, 'args' => ['foo', 1, :bat => 'bar'])
+    #   Stompkiq::Client.push(:queue => 'my_queue', :class => MyWorker, :args => ['foo', 1, :bat => 'bar'])
     #
     def self.push(item)
-      raise(ArgumentError, "Message must be a Hash of the form: { 'class' => SomeWorker, 'args' => ['bob', 1, :foo => 'bar'] }") unless item.is_a?(Hash)
+      raise(ArgumentError, "Message must be a Hash of the form: { :class => SomeWorker, :args => ['bob', 1, :foo => 'bar'] }") unless item.is_a?(Hash)
       raise(ArgumentError, "Message must include a class and set of arguments: #{item.inspect}") if !item[:class] || !item[:args]
       raise(ArgumentError, "Message must include a Stompkiq::Worker class, not class name: #{item[:class].ancestors.inspect}") if !item[:class].is_a?(Class) || !item[:class].respond_to?('get_stompkiq_options')
 

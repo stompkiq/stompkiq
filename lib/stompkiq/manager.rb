@@ -2,7 +2,7 @@ require 'celluloid'
 
 require 'stompkiq/util'
 require 'stompkiq/processor'
-require 'stompkiq/fetch'
+require 'stompkiq/fetcher'
 require 'stompkiq/version'
 
 module Stompkiq

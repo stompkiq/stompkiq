@@ -56,7 +56,7 @@ class TestMiddleware < MiniTest::Unit::TestCase
 
     it 'executes middleware in the proper order' do
       recorder = []
-      msg = Stompkiq.dump_json({ 'class' => CustomWorker.to_s, 'args' => [$recorder] })
+      msg = Stompkiq.dump_json({ :class => CustomWorker.to_s, :args => [$recorder] })
 
       Stompkiq.server_middleware do |chain|
         # should only add once, second should be ignored

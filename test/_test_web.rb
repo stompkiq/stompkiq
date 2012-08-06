@@ -40,7 +40,7 @@ class TestWeb < MiniTest::Unit::TestCase
     end
 
     it 'can display queues' do
-      assert Stompkiq::Client.push(:queue => :foo, 'class' => WebWorker, 'args' => [1, 3])
+      assert Stompkiq::Client.push(:queue => :foo, :class => WebWorker, :args => [1, 3])
 
       get '/queues'
       assert_equal 200, last_response.status
@@ -139,7 +139,7 @@ class TestWeb < MiniTest::Unit::TestCase
     it 'can retry a single retry now' do
       msg, score = add_retry
 
-      post "/retries/#{score}", 'retry' => 'Retry'
+      post "/retries/#{score}", :retry => 'Retry'
       assert_equal 302, last_response.status
       assert_equal 'http://example.org/retries', last_response.header['Location']
 
@@ -149,8 +149,8 @@ class TestWeb < MiniTest::Unit::TestCase
     end
 
     def add_scheduled
-      msg = { 'class' => 'HardWorker',
-              'args' => ['bob', 1, Time.now.to_f],
+      msg = { :class => 'HardWorker',
+              :args => ['bob', 1, Time.now.to_f],
               'at' => Time.now.to_f }
       score = Time.now.to_f
       Stompkiq.redis do |conn|
@@ -160,16 +160,16 @@ class TestWeb < MiniTest::Unit::TestCase
     end
 
     def add_retry
-      msg = { 'class' => 'HardWorker',
-              'args' => ['bob', 1, Time.now.to_f],
+      msg = { :class => 'HardWorker',
+              :args => ['bob', 1, Time.now.to_f],
               :queue => 'default',
-              'error_message' => 'Some fake message',
-              'error_class' => 'RuntimeError',
-              'retry_count' => 0,
-              'failed_at' => Time.now.utc, }
+              :error_message => 'Some fake message',
+              :error_class => 'RuntimeError',
+              :retry_count => 0,
+              :failed_at => Time.now.utc, }
       score = Time.now.to_f
       Stompkiq.redis do |conn|
-        conn.zadd('retry', score, Stompkiq.dump_json(msg))
+        conn.zadd(:retry, score, Stompkiq.dump_json(msg))
       end
       [msg, score]
     end
