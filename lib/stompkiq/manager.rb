@@ -103,7 +103,20 @@ module Stompkiq
 
     def assign(msg, queue)
       watchdog("Manager#assign died") do
-        if stopped?
+        # This works but it's a hack.  Need more elegant way to block if the ready queue is empty.
+        # Also need to check for stopped? and requeue if so
+
+        puts "Client message pull thread:  #{Thread.current.object_id.to_s(36)}"
+
+        processor = nil
+        sleep 1 until stopped? || processor = @ready.pop
+
+        if processor
+          @in_progress[processor.object_id] = [msg, queue]
+          @busy << processor
+          processor.process!(msg, queue)
+        else
+          # We need to requeue.
           # Race condition between Manager#stop if Fetcher
           # is blocked on redis and gets a message after
           # all the ready Processors have been stopped.
@@ -111,22 +124,17 @@ module Stompkiq
           Stompkiq.stomp do |conn|
             conn.publish(queue, msg)
           end
-        else
-          # This works but it's a hack.  Need more elegant way to block if the ready queue is empty.
-          # Also need to check for stopped? and requeue if so
-          processor = nil
-          while processor == nil do
-            processor = @ready.pop
-            sleep 1 if processor == nil
-          end
-          
-          # processor = @ready.pop
-          @in_progress[processor.object_id] = [msg, queue]
-          @busy << processor
-          processor.process!(msg, queue)
         end
+
       end
+      
     end
+
+    def wait_for_free_processor
+      sleep 1
+      stopped?
+    end
+    
 
     private
 

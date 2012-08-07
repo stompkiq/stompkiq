@@ -27,7 +27,7 @@ class PlainOldRuby
 
   def self.run_many(how_many=5, min_time=0, max_time=5)
     1.upto(how_many) do |n|
-      t = (min_time..max_time).to_a.sample
+      t = min_time + rand(max_time) #(min_time..max_time).to_a.sample
       perform_async "Worker #{n}, worked #{t} secs", t
     end
   end

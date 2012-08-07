@@ -20,13 +20,15 @@ class TestStats < MiniTest::Unit::TestCase
     it 'updates global stats in the success case' do
       msg = Stompkiq.dump_json({ :class => DumbWorker.to_s, :args => [""] })
       boss = MiniTest::Mock.new
-
+ 
       @redis.with do |conn|
 
         set = conn.smembers('workers')
         assert_equal 0, set.size
 
+        puts 'about to make processor'
         processor = Stompkiq::Processor.new(boss)
+        puts 'made processor'
         boss.expect(:processor_done!, nil, [processor])
         boss.expect(:processor_done!, nil, [processor])
         boss.expect(:processor_done!, nil, [processor])
@@ -43,6 +45,7 @@ class TestStats < MiniTest::Unit::TestCase
       end
     end
 
+    
     it 'updates global stats in the error case' do
       msg = Stompkiq.dump_json({ :class => DumbWorker.to_s, :args => [nil] })
       boss = MiniTest::Mock.new
