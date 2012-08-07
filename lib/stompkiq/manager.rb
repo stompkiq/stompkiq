@@ -112,7 +112,15 @@ module Stompkiq
             conn.publish(queue, msg)
           end
         else
-          processor = @ready.pop
+          # This works but it's a hack.  Need more elegant way to block if the ready queue is empty.
+          # Also need to check for stopped? and requeue if so
+          processor = nil
+          while processor == nil do
+            processor = @ready.pop
+            sleep 1 if processor == nil
+          end
+          
+          # processor = @ready.pop
           @in_progress[processor.object_id] = [msg, queue]
           @busy << processor
           processor.process!(msg, queue)
