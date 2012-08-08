@@ -16,15 +16,14 @@ require 'multi_json'
 class StepOne
   include Stompkiq::Worker
 
-  def perform(jobid)
+  def perform(job_id)
     redis = Redis.new
-    job = Job.new jobid, redis
+    job = Job.new job_id, redis
     stats = {threadid: Thread.current.object_id.to_s(36), step_no: 1, start: Time.now.to_s}
-    puts "Job #{jobid} in StepOne"
+    puts "Job #{job_id} in StepOne"
     sleep 2
     stats[:end] =  Time.now.to_s
     job.process_steps << stats
-    job.persist_to redis
     job.do_more_work redis
   end
 end
@@ -32,11 +31,11 @@ end
 class StepTwo
   include Stompkiq::Worker
 
-  def perform(jobid)
+  def perform(job_id)
     redis = Redis.new
-    job = Job.new jobid, redis
+    job = Job.new job_id, redis
     stats = {threadid: Thread.current.object_id.to_s(36), step_no: 2, start: Time.now.to_s}
-    puts "Job #{jobid} in StepTwo"
+    puts "Job #{job_id} in StepTwo"
     sleep 2
     stats[:end] =  Time.now.to_s
     job.process_steps << stats
@@ -47,11 +46,11 @@ end
 class StepThree
   include Stompkiq::Worker
 
-  def perform(jobid)
+  def perform(job_id)
     redis = Redis.new
-    job = Job.new jobid, redis
+    job = Job.new job_id, redis
     stats = {threadid: Thread.current.object_id.to_s(36), step_no: 3, start: Time.now.to_s}
-    puts "Job #{jobid} in StepThree"
+    puts "Job #{job_id} in StepThree"
     sleep 2
     stats[:end] =  Time.now.to_s
     job.process_steps << stats
@@ -60,28 +59,28 @@ class StepThree
 end
 
 class Job
-  attr_accessor :jobid, :name, :process_steps
+  attr_accessor :job_id, :name, :process_steps
   
-  def initialize(jobid, redis=nil)
-    @jobid = jobid
+  def initialize(job_id, redis=nil)
+    @job_id = job_id
     @process_steps = []
     hydrate_from redis if redis
   end
 
   def hydrate_from(redis)
-    state = MultiJson.load redis.get("JobObject:#{jobid}"), symbolize_keys: true
+    state = MultiJson.load redis.get("JobObject:#{job_id}"), symbolize_keys: true
     @name = state[:name]
     @process_steps = []
-    redis.hgetall("JobObject:#{jobid}:steps").each do |step_no, stat|
+    redis.hgetall("JobObject:#{job_id}:steps").each do |step_no, stat|
       @process_steps << MultiJson.load(stat, symbolize_keys: true)
     end
   end
 
   def persist_to(redis)
-    state = { jobid: jobid, name: name}
-    redis.set "JobObject:#{jobid}", MultiJson.dump(state)
+    state = { job_id: job_id, name: name}
+    redis.set "JobObject:#{job_id}", MultiJson.dump(state)
     @process_steps.each do |step|
-      redis.hset "JobObject:#{jobid}:steps", step[:step_no], MultiJson.dump(step)
+      redis.hset "JobObject:#{job_id}:steps", step[:step_no], MultiJson.dump(step)
     end
     
   end
@@ -89,13 +88,13 @@ class Job
   def do_work
     redis = Redis.new
     persist_to redis
-    StepOne.perform_async jobid
+    StepOne.perform_async job_id
   end
 
   def do_more_work(redis)
     persist_to redis
-    StepTwo.perform_async jobid
-    StepThree.perform_async jobid
+    StepTwo.perform_async job_id
+    StepThree.perform_async job_id
   end
   
     
