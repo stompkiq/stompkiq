@@ -1,0 +1,13 @@
+      ''        ""
+queue [x ]  [ ]
+retry [ ]  [ ]
+queuetype [ ]  [ ] 
+class  [ ]  [ ] 
+args   [ ]  [  ]
+error_message  [ ]  [ ]
+error_class  [ ]  [ ]
+retry_count  [ ]  [ ]
+failed_at   [ ]  [ ]
+retried_at  [ ]  [ ]
+backtrace
+error_backtrace

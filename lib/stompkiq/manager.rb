@@ -77,6 +77,9 @@ module Stompkiq
     def processor_done(processor)
       watchdog('Manager#processor_done died') do
         @done_callback.call(processor) if @done_callback
+
+        # Event call goes here
+        
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
         if stopped?
@@ -90,6 +93,9 @@ module Stompkiq
 
     def processor_died(processor, reason)
       watchdog("Manager#processor_died died") do
+
+        #Event call goes here
+        
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
 
@@ -114,6 +120,9 @@ module Stompkiq
         if processor
           @in_progress[processor.object_id] = [msg, queue]
           @busy << processor
+
+          # Event call goes here
+          
           processor.process!(msg, queue)
         else
           # We need to requeue.
