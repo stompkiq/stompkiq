@@ -29,7 +29,6 @@ module Stompkiq
     end
 
     def initialize(boss)
-      puts 'newing up processer'
       @boss = boss
     end
 

@@ -28,19 +28,19 @@ class TestEventSink < MiniTest::Unit::TestCase
     describe "define raise event" do
       it "raises an event" do
         @redis.expect :rpush, 1, [String, String]
-        assert Stompkiq::EventSink.raise_event event_name: :TestEvent
+        assert Stompkiq::EventSink.raise_event :TestEvent
         @redis.verify
       end
 
       it "sends event name to redis" do
-        @redis.expect :rpush, 1, ["Stompkiq:LocalEvents", "{\"event_name\":\"TestEvent\",\"time\":#{Time.now.to_i}}"]
-        assert Stompkiq::EventSink.raise_event event_name: :TestEvent
+        @redis.expect :rpush, 1, ["Stompkiq:LocalEvents", String] # "{\"event_name\":\"TestEvent\",\"time\":#{Time.now.to_i}}"]
+        assert Stompkiq::EventSink.raise_event :TestEvent
         @redis.verify
       end
 
       it "sends event details to redis" do
-        @redis.expect :rpush, 1, ["Stompkiq:LocalEvents", "{\"event_name\":\"TestEvent\",\"time\":#{Time.now.to_i},\"foo\":3}"]
-        assert Stompkiq::EventSink.raise_event event_name: :TestEvent, foo: 3 
+        @redis.expect :rpush, 1, ["Stompkiq:LocalEvents", String] # "{\"event_name\":\"TestEvent\",\"time\":#{Time.now.to_i},\"foo\":3}"]
+        assert Stompkiq::EventSink.raise_event :TestEvent, foo: 3 
         @redis.verify
       end
 

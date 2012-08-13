@@ -78,7 +78,7 @@ module Stompkiq
       watchdog('Manager#processor_done died') do
         @done_callback.call(processor) if @done_callback
 
-        # Event call goes here
+        EventSink.raise_event("StompkiqProcessorCompleted", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length)
         
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
@@ -94,7 +94,8 @@ module Stompkiq
     def processor_died(processor, reason)
       watchdog("Manager#processor_died died") do
 
-        #Event call goes here
+        EventSink.raise_event("StompkiqProcessorDied", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, reason: reason)
+
         
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
@@ -107,12 +108,12 @@ module Stompkiq
       end
     end
 
-    def assign(msg, queue)
+    def assign(msg, queue, klass)
       watchdog("Manager#assign died") do
         # This works but it's a hack.  Need more elegant way to block if the ready queue is empty.
         # Also need to check for stopped? and requeue if so
 
-        puts "Client message pull thread:  #{Thread.current.object_id.to_s(36)}"
+#        puts "Client message pull thread:  #{Thread.current.object_id.to_s(36)}"
 
         processor = nil
         sleep 1 until stopped? || processor = @ready.pop
@@ -121,7 +122,10 @@ module Stompkiq
           @in_progress[processor.object_id] = [msg, queue]
           @busy << processor
 
-          # Event call goes here
+
+          klass  = constantize(Stompkiq.load_json(msg)[:class])
+          EventSink.raise_event("StompkiqProcessorAssigned", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, queue: queue, message_class: klass)
+
           
           processor.process!(msg, queue)
         else
@@ -175,7 +179,7 @@ module Stompkiq
     def subscribe(queue_name)
       Stompkiq.stomp do |conn|
         conn.subscribe(queue_name) do  |msg|
-          assign(msg.body, msg.headers['destination'])
+          assign(msg.body, msg.headers['destination'], msg.headers['klass'])
         end
         
       end
