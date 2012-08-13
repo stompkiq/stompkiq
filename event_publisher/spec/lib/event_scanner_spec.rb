@@ -1,7 +1,7 @@
 require 'spec_helper'
 require 'redis'
 
-describe EventScanner do
+describe EventSource::EventScanner do
   it "is sane" do
     # "cockroach spec"--opposite of a "canary spec", this spec is
     # "very hard to kill". If this spec fails it means your whole spec
@@ -10,20 +10,24 @@ describe EventScanner do
   end
 
   it "is defined" do
-    EventScanner.should_not be_nil
+    EventSource::EventScanner.should_not be_nil
   end
 
   describe "#poll" do
     before :each do
-      @redis = Redis.new
-      @redis.del "Stompkiq:LocalEvents"
+      @redis = double('redis')
+      Redis.stub(:new) {@redis}
+      # @redis = Redis.new
+      # @redis.del "Stompkiq:LocalEvents"
     end
 
     
     it "can pull a message from redis" do
-      @redis.rpush "Stompkiq:LocalEvents", "foo"
-      @event_scanner = EventScanner.new
-      @event_scanner.pull_local_event_from_redis.should == ["Stompkiq:LocalEvents", "foo"]
+      msg = "{\"event_name\":\"TestEvent\",\"time\":#{Time.now.to_i}}"
+      @redis.should_receive(:blpop).and_return(["Stompkiq:LocalEvents", msg])
+      # @redis.rpush "Stompkiq:LocalEvents", "foo"
+      @event_scanner = EventSource::EventScanner.new #(@redis)
+      @event_scanner.pull_local_event_from_redis.should =~ ["Stompkiq:LocalEvents", msg]
     end
   end
 
