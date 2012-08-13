@@ -9,9 +9,9 @@ module EventSource
       @stomp = Stomp::Client.new "admin", "password", "127.0.0.1", 61613
     end
 
-    def broadcast_event(event_message)
-      decoded_message = MultiJson.load message
-      @stomp.publish "/topic/event_source:#{decoded_message[:event_name]}", message
+    def publish_event(event_message)
+      decoded_message = MultiJson.load event_message
+      @stomp.publish "/topic/event_source:#{decoded_message["event_name"]}", event_message
     end
     
   end

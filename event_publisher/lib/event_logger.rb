@@ -10,8 +10,8 @@ module EventSource
     end
 
     def log_event(event_message)
-      @stomp.publish "/queue/event_source:log", message
+      @stomp.publish "/queue/event_source:log", event_message
     end
-    
+
   end
 end
