@@ -37,3 +37,10 @@ module EventSource
 
   end
 end
+
+
+if __FILE__ == $0
+  scanner = EventSource::EventScanner.new
+  scanner.detect_and_broadcast_events
+end
+

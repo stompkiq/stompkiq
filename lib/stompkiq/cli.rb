@@ -179,6 +179,11 @@ module Stompkiq
           puts "Stompkiq #{Stompkiq::VERSION}"
           die(0)
         end
+
+        o.on '-e', '--eventorigination FLAG', "flag to signal if internal events should be signaled" do |arg|
+          opts[:event_origination] = arg.to_i == 1
+        end
+        
       end
 
       @parser.banner = "stompkiq [options]"

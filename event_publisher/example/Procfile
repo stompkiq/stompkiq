@@ -1,0 +1,1 @@
+workers:        bundle exec ../../bin/stompkiq -r event_source_example_worker.rb

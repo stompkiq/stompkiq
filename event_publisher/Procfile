@@ -1,0 +1,3 @@
+collector:      bundle exec ruby ./lib/event_stat_collector.rb
+logger:         bundle exec ruby ./lib/log_receiver.rb
+scanner:        bundle exec ruby ./lib/event_scanner.rb

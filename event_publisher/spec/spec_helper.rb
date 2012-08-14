@@ -4,5 +4,7 @@ $LOAD_PATH.unshift ROOT_PATH + 'lib'
 
 require 'event_scanner'
 require 'event_publisher'
+require 'log_receiver'
+require 'event_stat_collector'
 require 'rspec'
 

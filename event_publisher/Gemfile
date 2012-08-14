@@ -3,6 +3,8 @@ source :rubygems
 gem 'redis'
 gem 'multi_json'
 gem 'stompkiq', :git => 'git@github.com:Terenine/stompkiq.git'
+gem 'logging'
+gem 'configuration'
 
 group :development, :test do
   gem "rspec", "~> 2.0"

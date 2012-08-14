@@ -24,18 +24,23 @@ module Stompkiq
       @count = options[:concurrency] || 25
       @done_callback = nil
 
+      @event_origination = options[:event_origination]
+      @event_origination = true if @event_origination.nil?
       @in_progress = {}
       @done = false
       @busy = []
       @queues = options[:queues]
       @ready = @count.times.map { Processor.new_link(current_actor) }
       procline
+      EventSink.raise_event("StompkiqServiceStart", machine_name: Socket.gethostname, processor_count: @ready.size, queues: @queues,  options: options)
     end
 
     def stop(options={})
       watchdog('Manager#stop died') do
         shutdown = options[:shutdown]
         timeout = options[:timeout]
+        
+        EventSink.raise_event("StompkiqServiceShutdown", machine_name: Socket.gethostname)
 
         @done = true
 
@@ -65,6 +70,7 @@ module Stompkiq
     end
 
     def start
+
       @queues.each do |q|
         subscribe q
       end
@@ -78,7 +84,9 @@ module Stompkiq
       watchdog('Manager#processor_done died') do
         @done_callback.call(processor) if @done_callback
 
-        EventSink.raise_event("StompkiqProcessorCompleted", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length)
+        if @event_origination
+          EventSink.raise_event("StompkiqProcessorCompleted", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length)
+        end
         
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
@@ -94,8 +102,10 @@ module Stompkiq
     def processor_died(processor, reason)
       watchdog("Manager#processor_died died") do
 
-        EventSink.raise_event("StompkiqProcessorDied", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, reason: reason)
-
+        if @event_origination && !stopped? 
+          EventSink.raise_event("StompkiqProcessorDied", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, reason: reason)
+        end
+        
         
         @in_progress.delete(processor.object_id)
         @busy.delete(processor)
@@ -113,8 +123,6 @@ module Stompkiq
         # This works but it's a hack.  Need more elegant way to block if the ready queue is empty.
         # Also need to check for stopped? and requeue if so
 
-#        puts "Client message pull thread:  #{Thread.current.object_id.to_s(36)}"
-
         processor = nil
         sleep 1 until stopped? || processor = @ready.pop
 
@@ -122,10 +130,11 @@ module Stompkiq
           @in_progress[processor.object_id] = [msg, queue]
           @busy << processor
 
-
-          klass  = constantize(Stompkiq.load_json(msg)[:class])
-          EventSink.raise_event("StompkiqProcessorAssigned", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, queue: queue, message_class: klass)
-
+          if @event_origination
+            klass  = constantize(Stompkiq.load_json(msg)[:class])
+            EventSink.raise_event("StompkiqProcessorAssigned", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, queue: queue, message_class: klass)
+          end
+          
           
           processor.process!(msg, queue)
         else
