@@ -1,5 +1,4 @@
 require 'stompkiq'
-require 'stompkiq/event_sink'
 
 # If your client is single-threaded, we just need a single connection in our Redis connection pool
 #Stompkiq.configure_client do |config|
@@ -24,7 +23,7 @@ class EventSourceExampleWorker
   def perform(how_hard="super hard", how_long=1)
     sleep how_long
     puts "Workin' #{how_hard}"
-    Stompkiq::EventSink.raise_event("TestWorkerEvent", message: how_hard, duration: how_long)
+    raise_event("TestWorkerEvent", message: how_hard, duration: how_long)
   end
 
   def self.run_many(how_many=5, min_time=0, max_time=5)

@@ -1,5 +1,6 @@
 require 'stompkiq/client'
 require 'stompkiq/core_ext'
+require 'stompkiq/event_sink'
 
 module Stompkiq
 
@@ -30,6 +31,11 @@ module Stompkiq
       Stompkiq.logger
     end
 
+    # add event sink code here
+    def raise_event(event_name, options={})
+      Stompkiq::EventSink.raise_event(event_name, options)
+    end
+    
     module ClassMethods
       def perform_async(*args)
         client_push(:class => self, :args => args)
@@ -73,6 +79,7 @@ module Stompkiq
         Stompkiq::Client.push(*args)
       end
 
+      
     end
   end
 end

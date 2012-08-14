@@ -2,9 +2,12 @@ require 'stomp'
 require 'logging'
 require 'configuration'
 require_relative 'config/statcollector'
+require_relative '../common/enum_stats'
 
 module EventSource
   class EventStatCollector
+
+    attr_accessor :active_workers, :stats
     
     def initialize
       @config = Configuration.for('stat_collector')
@@ -20,6 +23,9 @@ module EventSource
                          ) if @log.appenders.count == 0
 
       @log.level = :info
+
+      @active_workers = {}
+      @stats = {}
     end
 
     def start
@@ -34,7 +40,81 @@ module EventSource
     
     def handle_message(topic, message)
       @log.info "Topic: #{topic}; Message: #{message}"
+
+      msg = MultiJson.load message, symbolize_keys: true
+      
+      if msg[:event_name] == "StompkiqProcessorAssigned"
+        handle_assign_message(msg)
+      elsif msg[:event_name] == "StompkiqProcessorCompleted"
+        handle_complete_message(msg)
+      end
     end
+
+    def handle_assign_message(msg)
+      @active_workers[active_worker_key msg ] = msg
+    end
+    
+    def handle_complete_message(msg)
+      start_message = @active_workers[active_worker_key msg]
+
+      compute_stats_for_class(start_message[:message_class].to_sym, start_message, msg)
+    end
+
+    def compute_stats_for_class(class_symbol, start_msg, end_msg)
+      class_stats = class_stats(class_symbol)
+      
+      class_stats[:run_times].push( end_msg[:time] - start_msg[:time])
+      class_stats[:runtime_mean] = class_stats[:run_times].mean
+      class_stats[:runtime_stdev] = class_stats[:run_times].standard_deviation
+
+    end
+
+    def class_stats(class_symbol)
+      init_stats_for_class class_symbol unless @stats.include? class_symbol
+
+      @stats[class_symbol]
+    end
+    
+    def init_stats_for_class(class_symbol)
+      unless @stats.include? class_symbol
+        @stats[class_symbol] = {mean_runtime: 0, run_times: [], run_count: 0}
+      end
+    end
+    
+
+    def active_worker_key(msg)
+      { machine_name: msg[:machine_name], processor: msg[:processor] }
+    end
+    
+
+      
+      # by Worker Class
+      #   num of calls
+      #   num successful
+      #   num errros
+      #   total time
+      #   mean time
+      #   standard deviation
+      #   detailed run entries
+      #       processor id, machine name
+      #       start time
+      #       end time
+      #       run time
+
+
+
+#      Dest: /topic/event_source:StompkiqProcessorAssigned; Body: {"event_name":"StompkiqProcessorAssigned","time":1344970617337,"machine_name":"ip-10-114-9-54","processor":5737300,"free_processors":24,"total_processors":25,"queue":"/queue/default","message_class":"EventSourceExampleWorker"}
+#      Dest: /topic/event_source:StompkiqProcessorDied; Body: {"event_name":"StompkiqProcessorDied","time":1344970619382,"machine_name":"ip-10-114-9-54","processor":5737300,"free_processors":24,"total_processors":25,"reason":"undefined method `raise_event' for Stompkiq::Worker:Module"}
+
+    #      Dest: /topic/event_source:StompkiqProcessorAssigned; Body: {"event_name":"StompkiqProcessorAssigned","time":1344970871691,"machine_name":"ip-10-114-9-54","processor":5526320,"free_processors":24,"total_processors":25,"queue":"/queue/default","message_class":"EventSourceExampleWorker"}
+#      Dest: /topic/event_source:StompkiqProcessorCompleted; Body: {"event_name":"StompkiqProcessorCompleted","time":1344970874754,"machine_name":"ip-10-114-9-54","processor":5526320,"free_processors":24,"total_processors":25}
+
+
+      
+      #      Dest: /topic/event_source:StompkiqServiceStart; Body: {"event_name":"StompkiqServiceStart","time":1344970610456,"machine_name":"ip-10-114-9-54","processor_count":25,"queues":["/queue/default"],"options":{"queues":["/queue/default"],"concurrency":25,"require":"./event_publisher/example/event_source_example_worker.rb","environment":"development","timeout":8,"enable_rails_extensions":true}}
+      #      Dest: /topic/event_source:StompkiqServiceShutdown; Body: {"event_name":"StompkiqServiceShutdown","time":1344970863820,"machine_name":"ip-10-114-9-54"}
+      #      Dest: /topic/event_source:StompkiqServiceStart; Body: {"event_name":"StompkiqServiceStart","time":1344970865588,"machine_name":"ip-10-114-9-54","processor_count":25,"queues":["/queue/default"],"options":{"queues":["/queue/default"],"concurrency":25,"require":"./event_publisher/example/event_source_example_worker.rb","environment":"development","timeout":8,"enable_rails_extensions":true}}
+
   end
 end
 
