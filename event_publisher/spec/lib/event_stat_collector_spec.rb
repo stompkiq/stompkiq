@@ -32,7 +32,11 @@ module EventSource
         @logger.stub(:[]).and_return(@logger)
         @logger.stub(:level=)
         @logger.stub(:info)
-        
+
+        @redis = double('redis')
+        Redis.stub(:new) {@redis}
+        @redis.stub(:hset)
+        @redis.stub(:hget).and_return("{\"mean_runtime\":0,\"run_times\":[3063],\"run_ct\":1,\"success_ct\":1,\"error_ct\":0,\"total_runtime\":3063,\"runtime_mean\":3063.0,\"runtime_stdev\":0}")
         @collector = EventStatCollector.new
 
       end

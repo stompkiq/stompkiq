@@ -1,0 +1,13 @@
+source :rubygems
+
+gem 'redis'
+gem 'multi_json'
+gem 'sinatra'
+gem 'thin'
+
+group :development, :test do
+  gem "rspec", "~> 2.0"
+  gem 'guard'
+  gem 'guard-rspec'
+end
+

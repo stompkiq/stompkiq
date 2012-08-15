@@ -1,0 +1,11 @@
+<!DOCTYPE html> <html> <head>
+<meta charset="UTF-8">
+<title>Event Source Worker Statistics</title> </head>
+<body>
+<% @stats.each do |klass, values| %>
+    <p>
+      <%= klass %>
+      <span><a href="/stats/<%= klass %>">[view]</a></span>
+    </p>
+<% end %>
+</body> </html>

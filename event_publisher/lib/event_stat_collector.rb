@@ -26,9 +26,11 @@ module EventSource
 
       @active_workers = {}
       @stats = {}
+      @redis = Redis.new
     end
 
     def start
+
       @stomp = Stomp::Client.new(@config.bus_username, @config.bus_password, @config.bus_location, @config.bus_port)
       @stomp.subscribe( @config.topic_to_listen_to) { |msg|
         handle_message(msg.headers['destination'], msg.body)
@@ -57,16 +59,27 @@ module EventSource
     def handle_complete_message(msg)
       start_message = @active_workers[active_worker_key msg]
 
-      compute_stats_for_class(start_message[:message_class].to_sym, start_message, msg)
+      compute_stats_for_class(start_message[:message_class].to_sym, start_message, msg, true)
     end
 
-    def compute_stats_for_class(class_symbol, start_msg, end_msg)
-      class_stats = class_stats(class_symbol)
-      
-      class_stats[:run_times].push( end_msg[:time] - start_msg[:time])
-      class_stats[:runtime_mean] = class_stats[:run_times].mean
-      class_stats[:runtime_stdev] = class_stats[:run_times].standard_deviation
+    def redis_stats_key
+      "EventStats"
+    end
+    
 
+    def compute_stats_for_class(class_symbol, start_msg, end_msg, run_success)
+      # This assumes that this object is the only source of changes to the stats in Redis.
+      class_stats = class_stats(class_symbol)
+      runtime = end_msg[:time] - start_msg[:time]
+      class_stats[:run_times] << runtime
+      class_stats[:runtime_mean] = class_stats[:run_times].mean
+      class_stats[:runtime_stdev] = class_stats[:run_times].length > 1? class_stats[:run_times].standard_deviation : 0
+      class_stats[:run_ct] += 1
+      class_stats[:success_ct] += 1 if run_success
+      class_stats[:error_ct] += 1 unless run_success
+      class_stats[:total_runtime] += runtime
+#      puts class_stats
+      @redis.hset redis_stats_key, class_symbol,  MultiJson.dump(class_stats)
     end
 
     def class_stats(class_symbol)
@@ -77,7 +90,7 @@ module EventSource
     
     def init_stats_for_class(class_symbol)
       unless @stats.include? class_symbol
-        @stats[class_symbol] = {mean_runtime: 0, run_times: [], run_count: 0}
+        @stats[class_symbol] = {mean_runtime: 0, run_times: [], run_ct: 0, success_ct: 0, error_ct: 0, total_runtime: 0}
       end
     end
     
