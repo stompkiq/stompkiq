@@ -3,6 +3,8 @@ require 'logging'
 require 'configuration'
 require_relative 'config/statcollector'
 require_relative '../common/enum_stats'
+require 'redis'
+require 'multi_json'
 
 module EventSource
   class EventStatCollector
@@ -43,13 +45,18 @@ module EventSource
     def handle_message(topic, message)
       @log.info "Topic: #{topic}; Message: #{message}"
 
-      msg = MultiJson.load message, symbolize_keys: true
-      
-      if msg[:event_name] == "StompkiqProcessorAssigned"
-        handle_assign_message(msg)
-      elsif msg[:event_name] == "StompkiqProcessorCompleted"
-        handle_complete_message(msg)
+      begin
+        msg = MultiJson.load message, symbolize_keys: true
+
+        if msg[:event_name] == "StompkiqProcessorAssigned"
+          handle_assign_message(msg)
+        elsif msg[:event_name] == "StompkiqProcessorCompleted"
+          handle_complete_message(msg)
+        end
+      rescue Exception => e
+        @log.info e
       end
+      
     end
 
     def handle_assign_message(msg)
@@ -57,6 +64,9 @@ module EventSource
     end
     
     def handle_complete_message(msg)
+      # @log.info "msg: #{msg}"
+      # @log.info "key: #{active_worker_key msg}"
+      # @log.info "active_workers: #{@active_workers}"
       start_message = @active_workers[active_worker_key msg]
 
       compute_stats_for_class(start_message[:message_class].to_sym, start_message, msg, true)
