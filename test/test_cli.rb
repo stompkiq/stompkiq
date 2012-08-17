@@ -134,7 +134,8 @@ class TestCli < MiniTest::Unit::TestCase
                     '-r', @tmp_lib_path,
                     '-P', @tmp_path,
                     '-q', 'often,7',
-                    '-q', 'seldom,3'])
+                    '-q', 'seldom,3',
+                    '-E', '1'])
       end
 
       after do
@@ -152,6 +153,10 @@ class TestCli < MiniTest::Unit::TestCase
 
       it 'uses environment flag' do
         assert_equal 'snoop', Stompkiq.options[:environment]
+      end
+
+      it 'uses eventorigination flag' do
+        assert Stompkiq.options[:event_origination]
       end
 
       it 'uses pidfile flag' do

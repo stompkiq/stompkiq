@@ -180,7 +180,7 @@ module Stompkiq
           die(0)
         end
 
-        o.on '-e', '--eventorigination FLAG', "flag to signal if internal events should be signaled" do |arg|
+        o.on '-E', '--eventorigination FLAG', "flag to signal if internal events should be signaled" do |arg|
           opts[:event_origination] = arg.to_i == 1
         end
         
