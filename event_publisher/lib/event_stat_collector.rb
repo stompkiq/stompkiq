@@ -7,6 +7,8 @@ require 'redis'
 require 'multi_json'
 
 module EventSource
+  # - Calculates statistics for a job
+  # - Records them logfile
   class EventStatCollector
     attr_accessor :active_workers, :stats
     
@@ -54,6 +56,10 @@ module EventSource
     def handle_assign_message(msg)
       # TODO: Need a way to ever delete keys from this hash, else it
       # will keep growing in memory until this worker is restarted
+      #
+      # ANSWER: handle_complete_message should erase them. You can get
+      # multiple runtimes if the process crashes/fails several times
+      # before crashing
       @active_workers[active_worker_key msg] = msg
     end
     
@@ -63,6 +69,8 @@ module EventSource
       # TODO: is it possible to ever update stats[:error_count]? This
       # is currently the  only method that creates/updates stats, and
       # it has a hard-coded true for errors
+      # ANSWER: there should be a handle_error_message() that would do
+      # this
       update_stats_for_class start_message[:message_class].to_sym, start_message, msg, true
     end
 
@@ -71,6 +79,9 @@ module EventSource
     end
     
     def active_worker_key(msg)
+      # TODO: Make sure this stays unique if we run multiple stompkiqs
+      # on a single server. If it doesn't, either find a way to
+      # uniquify this or document that we can't run multiple stompkiqs
       { machine_name: msg[:machine_name], processor: msg[:processor] }
     end
 

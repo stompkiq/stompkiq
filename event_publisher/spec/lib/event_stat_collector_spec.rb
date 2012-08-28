@@ -65,6 +65,8 @@ module EventSource
         # assign and we get the complete? What if this worker crashes
         # and restarts, and we get a complete for which there is no
         # start message?
+        #
+        # Known. This is a spike; need to address it
         before :each do
           @collector.handle_message @assign_topic, @success_assign_msg
         end
