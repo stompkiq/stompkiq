@@ -8,7 +8,6 @@ require 'multi_json'
 
 module EventSource
   class EventStatCollector
-
     attr_accessor :active_workers, :stats
     
     def initialize
@@ -32,14 +31,11 @@ module EventSource
     end
 
     def start
-
       @stomp = Stomp::Client.new(@config.bus_username, @config.bus_password, @config.bus_location, @config.bus_port)
-      @stomp.subscribe( @config.topic_to_listen_to) { |msg|
-        handle_message(msg.headers['destination'], msg.body)
+      @stomp.subscribe(@config.topic_to_listen_to) { |msg|
+        handle_message msg.headers['destination'], msg.body
       }
-      while true
-        sleep 5
-      end
+      sleep 5 while true
     end
     
     def handle_message(topic, message)
@@ -49,18 +45,29 @@ module EventSource
         msg = MultiJson.load message, symbolize_keys: true
 
         if msg[:event_name] == "StompkiqProcessorAssigned"
-          handle_assign_message(msg)
+          handle_assign_message msg
         elsif msg[:event_name] == "StompkiqProcessorCompleted"
-          handle_complete_message(msg)
+          handle_complete_message msg
         end
       rescue Exception => e
+        # FIXME: never never never rescue Exception! There is exactly
+        # one place in the universe where you can rescue Exception and
+        # THIS IS NOT THAT PLACE.
+        #
+        # TODO: Figure out what exceptions can be thrown here and
+        # rescue them explicitly
+        #
+        # This rescue clause *WILL* bite us on the tush one day. It
+        # will catch a completely bizarre and unexpected condition and
+        # silently swallow it, pushing it down to the log.info stack
+        # as seen in the code below, when the correct behavior should
+        # have been to explode messily
         @log.info e
       end
-      
     end
 
     def handle_assign_message(msg)
-      @active_workers[active_worker_key msg ] = msg
+      @active_workers[active_worker_key msg] = msg
     end
     
     def handle_complete_message(msg)
@@ -69,7 +76,7 @@ module EventSource
       # @log.info "active_workers: #{@active_workers}"
       start_message = @active_workers[active_worker_key msg]
 
-      compute_stats_for_class(start_message[:message_class].to_sym, start_message, msg, true)
+      compute_stats_for_class start_message[:message_class].to_sym, start_message, msg, true
     end
 
     def redis_stats_key
@@ -79,6 +86,10 @@ module EventSource
 
     def compute_stats_for_class(class_symbol, start_msg, end_msg, run_success)
       # This assumes that this object is the only source of changes to the stats in Redis.
+      # dbrady notes: Redis gives us an inc method that would let us
+      # get around this concern. We'd lose the ability to update this
+      # as a single structure (e.g. atomically, as if it were in a
+      # "transaction") but something to consider
       class_stats = class_stats(class_symbol)
       runtime = end_msg[:time] - start_msg[:time]
       class_stats[:run_times] << runtime
