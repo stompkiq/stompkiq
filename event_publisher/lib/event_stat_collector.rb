@@ -26,7 +26,8 @@ module EventSource
       @log.level = :info
 
       @active_workers = {}
-      @stats = {}
+
+      @stats = Hash.new {|hash,key| hash[key] = {mean_runtime: 0, run_times: [], run_count: 0, success_count: 0, error_count: 0, total_runtime: 0} }
       @redis = Redis.new
     end
 
@@ -41,85 +42,57 @@ module EventSource
     def handle_message(topic, message)
       @log.info "Topic: #{topic}; Message: #{message}"
 
-      begin
-        msg = MultiJson.load message, symbolize_keys: true
+      msg = MultiJson.load message, symbolize_keys: true
 
-        if msg[:event_name] == "StompkiqProcessorAssigned"
-          handle_assign_message msg
-        elsif msg[:event_name] == "StompkiqProcessorCompleted"
-          handle_complete_message msg
-        end
-      rescue Exception => e
-        # FIXME: never never never rescue Exception! There is exactly
-        # one place in the universe where you can rescue Exception and
-        # THIS IS NOT THAT PLACE.
-        #
-        # TODO: Figure out what exceptions can be thrown here and
-        # rescue them explicitly
-        #
-        # This rescue clause *WILL* bite us on the tush one day. It
-        # will catch a completely bizarre and unexpected condition and
-        # silently swallow it, pushing it down to the log.info stack
-        # as seen in the code below, when the correct behavior should
-        # have been to explode messily
-        @log.info e
+      if msg[:event_name] == "StompkiqProcessorAssigned"
+        handle_assign_message msg
+      elsif msg[:event_name] == "StompkiqProcessorCompleted"
+        handle_complete_message msg
       end
     end
 
     def handle_assign_message(msg)
+      # TODO: Need a way to ever delete keys from this hash, else it
+      # will keep growing in memory until this worker is restarted
       @active_workers[active_worker_key msg] = msg
     end
     
     def handle_complete_message(msg)
-      # @log.info "msg: #{msg}"
-      # @log.info "key: #{active_worker_key msg}"
-      # @log.info "active_workers: #{@active_workers}"
       start_message = @active_workers[active_worker_key msg]
 
-      compute_stats_for_class start_message[:message_class].to_sym, start_message, msg, true
+      # TODO: is it possible to ever update stats[:error_count]? This
+      # is currently the  only method that creates/updates stats, and
+      # it has a hard-coded true for errors
+      update_stats_for_class start_message[:message_class].to_sym, start_message, msg, true
     end
 
     def redis_stats_key
       "EventStats"
     end
     
+    def active_worker_key(msg)
+      { machine_name: msg[:machine_name], processor: msg[:processor] }
+    end
 
-    def compute_stats_for_class(class_symbol, start_msg, end_msg, run_success)
+    def update_stats_for_class(class_symbol, start_msg, end_msg, run_success)
       # This assumes that this object is the only source of changes to the stats in Redis.
       # dbrady notes: Redis gives us an inc method that would let us
       # get around this concern. We'd lose the ability to update this
       # as a single structure (e.g. atomically, as if it were in a
       # "transaction") but something to consider
-      class_stats = class_stats(class_symbol)
+      class_stats = @stats[class_symbol]
       runtime = end_msg[:time] - start_msg[:time]
       class_stats[:run_times] << runtime
       class_stats[:runtime_mean] = class_stats[:run_times].mean
       class_stats[:runtime_stdev] = class_stats[:run_times].length > 1? class_stats[:run_times].standard_deviation : 0
-      class_stats[:run_ct] += 1
-      class_stats[:success_ct] += 1 if run_success
-      class_stats[:error_ct] += 1 unless run_success
+      class_stats[:run_count] += 1
+      class_stats[:success_count] += 1 if run_success
+      class_stats[:error_count] += 1 unless run_success
       class_stats[:total_runtime] += runtime
-#      puts class_stats
+      #      puts class_stats
       @redis.hset redis_stats_key, class_symbol,  MultiJson.dump(class_stats)
     end
 
-    def class_stats(class_symbol)
-      init_stats_for_class class_symbol unless @stats.include? class_symbol
-
-      @stats[class_symbol]
-    end
-    
-    def init_stats_for_class(class_symbol)
-      unless @stats.include? class_symbol
-        @stats[class_symbol] = {mean_runtime: 0, run_times: [], run_ct: 0, success_ct: 0, error_ct: 0, total_runtime: 0}
-      end
-    end
-    
-
-    def active_worker_key(msg)
-      { machine_name: msg[:machine_name], processor: msg[:processor] }
-    end
-    
 
       
       # by Worker Class
