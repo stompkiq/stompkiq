@@ -7,18 +7,7 @@ require 'multi_json'
 require 'active_record'
 require 'uuidtools'
 
-# Today's Handy Emacs Navigation Tips:
-#
-# C-v PageDn
-# M-v PageUp
-# M-< Go to BOF
-# M-> Go to EOF
-# C-l Center current line on page
-#
-# BONUS PROTIP:
-# C-u X C-l Center page so that current line is at line X
-
-db_config = Configuration.for('event_publisher_long_term_storage')
+db_config = Configuration.for 'event_publisher_long_term_storage'
 ActiveRecord::Base.establish_connection(
                                         database: db_config.db_name_event_source,
                                         host: db_config.db_server_name,
@@ -30,6 +19,8 @@ ActiveRecord::Base.establish_connection(
                                         )
 
 class EventPublisherLog < ActiveRecord::Base
+  self.primary_key = "id"
+  
   # serialize <column>, <LoaderClass>
   # -> before saving to the database, table.column = LoaderClass.dump(self.column)
   # -> after loading from the database, self.column = LoaderClass.load(table.column)
@@ -40,23 +31,20 @@ class EventPublisherLog < ActiveRecord::Base
 
   # Before we save to the database the very first time, set our id
   # field to a guid. SQL Server gets absolutely BENT OUT OF SHAPE if
-  # you try to pass SET id=NULL. IT'S CALLED FRICKING SQL-92 MORANS
+  # you try to pass SET id=NULL. Ultimately we need to handle both
+  # cases; if we create without an id SQL Server should assign us one
+  # (this is the case that Karen would very much like supported and
+  # currently ActiveRecord and SQL Server are fighting), while if we
+  # create an object that has a guid already SQL Server should accept
+  # it (this is in keeping with accepted uuid/guid distributed-key
+  # practices but we'll need to sync that with the DBA's, this
+  # definitely touches them where they live)
 
- # commenting out this code for now.....
   before_create :create_guid
 
-#  before_create :change_column_definition
-
-  def change_column_definition
-    change_column :event_publisher_logs, :id, :uniqueidentifier, :default => nil
-  end
-  # change_column :event_publisher_logs, :id, :uniqueidentifier, :default => nil
-  # alias_attribute :id
-  
   # id
   # event_name
   # event_time
-  # event_log_item VARCHAR(500) <-- drop this column
   # event_data VARCHAR(MAX) # your mom fits in here (almost)
   # log_level VARCHAR(10) # one of 'INFO', 'DEBUG', 'ERROR', 'FATAL'
   # created_at DATETIME
@@ -69,6 +57,11 @@ class EventPublisherLog < ActiveRecord::Base
     new event_name: event_name, event_time: event_time, event_data: json, log_level: 'INFO'
   end
 
+  # BUG: Right now we can't create a record without explicitly setting
+  # a valid guid. BUT THEN the sql server OVERWRITES our guid with one
+  # of its own. Arglebarglewat--this is basically the wrongest
+  # possible combination of "use either option" that doesn't actually
+  # not store data in the database.
   def create_guid
     self.id ||= UUIDTools::UUID.random_create.to_s
   end
@@ -76,7 +69,6 @@ end
 
 module EventSource
   class LogReceiver
-
     def initialize(options={})
       @config = Configuration.for('logreceiver')
       
@@ -90,25 +82,14 @@ module EventSource
                                                         )
                          ) if @log.appenders.count == 0
 
-          @log.level = :info
+      @log.level = :info
     end
     
     def handle_message(message)
-      begin
-        @log.info "I HAVE THE MOST AMAZING HAT"
-        @log.info(message)
-        # Need to save to database instead of logfile?
-        event = EventPublisherLog.parse message
-        event.save
-        @log.debug "LogReceiver: saved event! #{!!event.new_record?}"
-        @log.info "A WINNER IS ME!!!"
-      rescue Exception => e
-        @log.error "I CAN'T FEEL THE RIGHT SIDE OF MY BODY"
-        @log.error "Hey reemmber when Dave went all ape-poo about not catching Exception? Yeah. SHUT UP."
-        @log.error "Here's what wreng. WReng? WENT WRONG AND STUFF."
-        @log.error e.inspect
-        @log.error "Here endeth the lesson."
-      end
+      @log.info(message)
+      # Need to save to database instead of logfile?
+      event = EventPublisherLog.parse message
+      event.save!
     end
 
     def listen_for_messages
