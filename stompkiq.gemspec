@@ -3,7 +3,7 @@ require File.expand_path('../lib/stompkiq/version', __FILE__)
 
 Gem::Specification.new do |gem|
   gem.authors       = ["Chris Meadows, Chris McNabb, Shaun Eutsey, David Brady"]
-  gem.date = "2012-08-06"
+  gem.date = "2012-09-11"
   gem.email = ["meadoch1@gmail.com", "chrismcnabbsoftwaredeveloper@gmail.com", "shaun@shauneutsey.com", "david.brady@sliderulelabs.com"]
   gem.description   = gem.summary = "Simple, efficient message processing using ActiveMQ Apollo for Ruby"
   gem.homepage      = "https://terenine.github.com/stompkiq"
