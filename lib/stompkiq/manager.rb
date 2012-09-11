@@ -132,8 +132,6 @@ module Stompkiq
 
           if @event_origination
             klass  = constantize(Stompkiq.load_json(msg)[:class])
-            puts "klass: #{klass}"
-            puts "msg: #{msg}"
             EventSink.raise_event("StompkiqProcessorAssigned", machine_name: Socket.gethostname, processor: processor.object_id, free_processors: @ready.length, total_processors: @ready.length + @busy.length, queue: queue, message_class: klass.to_s)
           end
           
