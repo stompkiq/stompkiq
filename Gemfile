@@ -8,6 +8,9 @@ gem 'multi_json', '~> 1'
 gem 'redis', '~> 3'
 gem 'redis-namespace', '~> 1.2.0'
 gem 'stomp', '~> 1.2.4'
+gem 'activerecord'
+gem 'activerecord-sqlserver-adapter'
+gem 'tiny_tds'
 
 group :development, :test do
   gem 'apollo_mgmt', :git => 'git@github.com:Terenine/apollo_mgmt.git'

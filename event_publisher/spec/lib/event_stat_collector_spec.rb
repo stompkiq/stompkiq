@@ -15,6 +15,7 @@ module EventSource
 
     describe "#handle_message" do
       before :each do
+        # WOOOOF.
         @fail_assign_msg = '{"event_name":"StompkiqProcessorAssigned","time":1344970617337,"machine_name":"ip-10-114-9-54","processor":5737300,"free_processors":24,"total_processors":25,"queue":"/queue/default","message_class":"EventSourceExampleWorker"}'
         @fail_die_msg = '{"event_name":"StompkiqProcessorDied","time":1344970619382,"machine_name":"ip-10-114-9-54","processor":5737300,"free_processors":24,"total_processors":25,"reason":"undefined method `raise_event\' for Stompkiq::Worker:Module"}'
 
@@ -36,7 +37,7 @@ module EventSource
         @redis = double('redis')
         Redis.stub(:new) {@redis}
         @redis.stub(:hset)
-        @redis.stub(:hget).and_return("{\"mean_runtime\":0,\"run_times\":[3063],\"run_ct\":1,\"success_ct\":1,\"error_ct\":0,\"total_runtime\":3063,\"runtime_mean\":3063.0,\"runtime_stdev\":0}")
+        @redis.stub(:hget).and_return("{\"mean_runtime\":0,\"run_times\":[3063],\"run_count\":1,\"success_count\":1,\"error_count\":0,\"total_runtime\":3063,\"runtime_mean\":3063.0,\"runtime_stdev\":0}")
         @collector = EventStatCollector.new
 
       end
@@ -51,6 +52,30 @@ module EventSource
         @collector.handle_message(@complete_topic, @success_complete_msg)
       end
 
+
+      describe "#handle_assign_message" do
+        it "records message in active_workers for later" do
+          lambda { @collector.handle_message(@assign_topic, @success_assign_msg) }.should change { @collector.active_workers.size }.by(1)
+        end
+      end
+      
+      describe "#handle_complete_message" do
+        # FIXME: Fragile. Crashes if we try to complete a message that
+        # we haven't seen assigned. What if another worker gets the
+        # assign and we get the complete? What if this worker crashes
+        # and restarts, and we get a complete for which there is no
+        # start message?
+        #
+        # Known. This is a spike; need to address it
+        before :each do
+          @collector.handle_message @assign_topic, @success_assign_msg
+        end
+
+        it "updates stats" do
+          lambda { @collector.handle_message(@complete_topic, @success_complete_msg) }.should change {@collector.stats[:EventSourceExampleWorker][:run_count] }.by(1)
+        end
+      end
+      
       describe "successful process flow" do
         before :each do
           @collector.handle_message(@assign_topic, @success_assign_msg)
@@ -58,8 +83,8 @@ module EventSource
 
         it "creates the correct hash key for a message" do
           msg = MultiJson.load @success_assign_msg, symbolize_keys: true
-          rslt = @collector.active_worker_key msg
-          rslt.should == {machine_name: "ip-10-114-9-54", processor: 5526320}
+          result = @collector.active_worker_key msg
+          result.should == {machine_name: "ip-10-114-9-54", processor: 5526320}
         end
 
 
