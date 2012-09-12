@@ -88,8 +88,8 @@ module EventSource
     def handle_message(message)
       @log.info(message)
       # Need to save to database instead of logfile?
-      event = EventPublisherLog.parse message
-      event.save!
+      # event = EventPublisherLog.parse message
+      # event.save!
     end
 
     def listen_for_messages
